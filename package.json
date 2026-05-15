@@ -1,0 +1,32 @@
+{
+  "name": "seniorlink-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "ci": "npm run lint && npm run build && npm audit --audit-level=high",
+    "test:e2e": "playwright test",
+    "test:e2e:doc-login": "playwright test -c playwright.doc-login.config.ts",
+    "db:reset": "npx supabase db reset --yes",
+    "db:reset:stepwise": "powershell -NoProfile -ExecutionPolicy Bypass -File supabase/scripts/stepwise-db-reset.ps1 -Stepwise"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.15.0",
+    "eslint-config-next": "^15.1.0",
+    "typescript": "^5.7.0"
+  }
+}
