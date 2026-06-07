@@ -22,11 +22,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint and dependency audit
-        run: npm run lint && npm audit --audit-level=high
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Secret leak scan (service role key)
+        run: '! grep -rn "NEXT_PUBLIC.*SERVICE_ROLE\|NEXT_PUBLIC.*service_role" src/ --include="*.ts" --include="*.tsx" --include="*.js"'
 
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
 
-      - name: E2E smoke (includes production build via Playwright webServer)
+      - name: E2E smoke
         run: npm run test:e2e

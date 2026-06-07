@@ -18,6 +18,7 @@ test("환경 변수 계정으로 로그인 → 대시보드", async ({ page }) =
       true,
       "E2E_COMPANY_EMAIL 미설정. docs/test_usecase.md TU-P2-00 참고 — @example.com 은 사용할 수 없습니다."
     );
+    return;
   }
 
   await page.goto("/login");

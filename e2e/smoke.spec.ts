@@ -49,3 +49,41 @@ test.describe("Phase 8 스모크 (공개·인증 경계)", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 });
+
+test.describe("BTS-01: TF 생성 경계", () => {
+  test("TF 요청 목록(/requests) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/requests");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("TF 요청 생성(/requests/new) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/requests/new");
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
+
+test.describe("BTS-02: 매칭 표시 UI 경계", () => {
+  test("매칭 후보(/requests/[id]/matches) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/requests/00000000-0000-0000-0000-000000000000/matches");
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
+
+test.describe("BTS-03: 제안 수락 UI 경계", () => {
+  test("제안 목록(/requests/[id]/proposals) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/requests/00000000-0000-0000-0000-000000000000/proposals");
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
+
+test.describe("BTS-04: 계약 조회 UI 경계", () => {
+  test("계약 목록(/contracts) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/contracts");
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("계약 상세(/contracts/[id]) — 비로그인 시 로그인으로 리다이렉트", async ({ page }) => {
+    await page.goto("/contracts/00000000-0000-0000-0000-000000000000");
+    await expect(page).toHaveURL(/\/login/);
+  });
+});

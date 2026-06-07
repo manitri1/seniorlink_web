@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { ContractProgressForm } from "./ContractProgressForm";
 import { ContractActivateForm } from "./ContractActivateForm";
 import { ContractReviewSection } from "./ContractReviewSection";
+import { GeneratePdfForm } from "./GeneratePdfForm";
 
 export default async function ContractDetailPage({
   params,
@@ -86,14 +87,11 @@ export default async function ContractDetailPage({
           <dt style={{ color: "var(--color-on-surface-variant)" }}>진행률</dt>
           <dd style={{ margin: 0 }}>{row.progress}%</dd>
           <dt style={{ color: "var(--color-on-surface-variant)" }}>PDF</dt>
-          <dd style={{ margin: 0 }}>
+          <dd style={{ margin: 0, display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             {row.pdf_url ? (
-              <a href={row.pdf_url}>열기</a>
-            ) : (
-              <span style={{ color: "var(--color-on-surface-variant)" }}>
-                미등록 (Storage·서명 URL 연동은 Phase 6.2)
-              </span>
-            )}
+              <a href={row.pdf_url} target="_blank" rel="noreferrer">열기</a>
+            ) : null}
+            <GeneratePdfForm contractId={contractId} />
           </dd>
         </dl>
         <div style={{ marginTop: "var(--space-stack)" }}>

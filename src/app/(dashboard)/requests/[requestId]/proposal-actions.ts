@@ -136,6 +136,36 @@ export async function withdrawProposal(
   return { success: "제안을 철회했습니다." };
 }
 
+/** populate_request_matches RPC를 호출해 분야·지역 기반 매칭을 실행합니다. */
+export async function runMatching(
+  _prev: ProposalActionState | null,
+  formData: FormData
+): Promise<ProposalActionState> {
+  const requestId = String(formData.get("request_id") ?? "").trim();
+  if (!requestId) {
+    return { error: "요청 정보가 없습니다." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "로그인이 필요합니다." };
+  }
+
+  const { error } = await supabase.rpc("populate_request_matches", {
+    p_request_id: requestId,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/requests/${requestId}/matches`);
+  return { success: "매칭을 완료했습니다." };
+}
+
 /**
  * 베타 데모: 시니어 앱에서 제안을 수락한 뒤 계약을 진행한다는 가정으로 `accepted`로 바꿉니다.
  * 운영에서는 시니어 클라이언트·알림만으로 상태를 바꿉니다.

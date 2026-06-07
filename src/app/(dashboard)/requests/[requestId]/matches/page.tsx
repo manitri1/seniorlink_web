@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureRequestMatches } from "@/lib/request-matches";
 import { Card } from "@/components/ui/Card";
+import { RunMatchingForm } from "./RunMatchingForm";
 
 type SeniorEmbed = {
   display_name: string;
@@ -86,10 +87,20 @@ export default async function RequestMatchesPage({
       </p>
 
       <Card title="매칭 결과">
-        <p style={{ margin: "0 0 var(--space-stack)", color: "var(--color-on-surface-variant)" }}>
-          MVP 데모: 시니어 풀과 요청을 바탕으로 후보를 자동 채웁니다. 실제 서비스에서는
-          RPC·외부 엔진 결과를 동기화합니다.
-        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "16px",
+            alignItems: "flex-start",
+            marginBottom: "var(--space-stack)",
+          }}
+        >
+          <p style={{ margin: 0, flex: "1 1 240px", color: "var(--color-on-surface-variant)" }}>
+            분야·지역 기반 매칭 결과입니다. 버튼을 클릭하면 최신 시니어 풀로 다시 계산합니다.
+          </p>
+          <RunMatchingForm requestId={requestId} />
+        </div>
 
         {list.length === 0 ? (
           <p style={{ margin: 0 }}>표시할 후보가 없습니다.</p>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { mapProposalDbError } from "@/lib/proposal";
 
 export type ContractActionState = {
@@ -294,6 +295,156 @@ export async function completeSettlementDemo(
   revalidatePath(`/contracts/${contractId}/settlement`);
   revalidatePath("/contracts");
   return { success: "정산이 완료되었습니다. 계약이 종료 처리되었습니다." };
+}
+
+// PDF 텍스트에 포함되면 안 되는 문자 이스케이프 (PDF 문자열 리터럴 규칙)
+function escPdf(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+/**
+ * 의존성 없는 최소 PDF 생성기 (Courier, ASCII 전용).
+ * xref 오프셋을 런타임에 계산하므로 내용이 바뀌어도 안전하다.
+ */
+function buildContractPdfBytes(data: {
+  contractId: string;
+  startDate: string;
+  endDate: string;
+  compensation: number;
+  status: string;
+  progress: number;
+}): Buffer {
+  const lines = [
+    "SENIORLINK CONTRACT SUMMARY",
+    "",
+    `Contract ID  : ${data.contractId}`,
+    `Period       : ${data.startDate} - ${data.endDate}`,
+    `Compensation : ${data.compensation.toLocaleString("en-US")} KRW`,
+    `Status       : ${data.status}`,
+    `Progress     : ${data.progress}%`,
+    "",
+    `Generated    : ${new Date().toISOString().slice(0, 19)}Z`,
+    "",
+    "This document is an automated summary for reference only.",
+  ];
+
+  const cmds: string[] = ["BT", "/F1 16 Tf", "72 760 Td"];
+  cmds.push(`(${escPdf(lines[0])}) Tj`);
+  cmds.push("0 -32 Td /F1 11 Tf");
+  for (let i = 1; i < lines.length; i++) {
+    cmds.push(`(${escPdf(lines[i])}) Tj`);
+    cmds.push("0 -18 Td");
+  }
+  cmds.push("ET");
+
+  const streamBuf = Buffer.from(cmds.join("\n"), "latin1");
+
+  const chunks: Buffer[] = [];
+  const offsets = new Array<number>(6).fill(0);
+  let pos = 0;
+
+  function p(s: string): void {
+    const b = Buffer.from(s, "latin1");
+    chunks.push(b);
+    pos += b.length;
+  }
+
+  p("%PDF-1.4\n");
+
+  offsets[1] = pos;
+  p("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+  offsets[2] = pos;
+  p("2 0 obj\n<< /Type /Pages /Kids [5 0 R] /Count 1 >>\nendobj\n");
+
+  offsets[3] = pos;
+  p(
+    "3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>\nendobj\n",
+  );
+
+  offsets[4] = pos;
+  p(`4 0 obj\n<< /Length ${streamBuf.length} >>\nstream\n`);
+  chunks.push(streamBuf);
+  pos += streamBuf.length;
+  p("\nendstream\nendobj\n");
+
+  offsets[5] = pos;
+  p(
+    "5 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>\nendobj\n",
+  );
+
+  const xrefOffset = pos;
+  p("xref\n0 6\n");
+  p("0000000000 65535 f\r\n");
+  for (let i = 1; i <= 5; i++) {
+    p(`${offsets[i].toString().padStart(10, "0")} 00000 n\r\n`);
+  }
+  p(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`);
+
+  return Buffer.concat(chunks);
+}
+
+export async function generateContractPdf(
+  _prev: ContractActionState | null,
+  formData: FormData,
+): Promise<ContractActionState> {
+  const contractId = String(formData.get("contract_id") ?? "").trim();
+  if (!contractId) return { error: "계약 ID가 없습니다." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: row, error: fetchErr } = await supabase
+    .from("contracts")
+    .select("id, start_date, end_date, compensation, status, progress")
+    .eq("id", contractId)
+    .maybeSingle();
+
+  if (fetchErr) return { error: fetchErr.message };
+  if (!row) return { error: "계약을 찾을 수 없습니다." };
+
+  const pdfBytes = buildContractPdfBytes({
+    contractId: row.id as string,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    compensation: row.compensation as number,
+    status: row.status as string,
+    progress: row.progress as number,
+  });
+
+  const service = createServiceClient();
+  const storagePath = `${contractId}.pdf`;
+
+  const { error: uploadErr } = await service.storage
+    .from("contracts")
+    .upload(storagePath, pdfBytes, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+
+  if (uploadErr) return { error: `Storage 업로드 실패: ${uploadErr.message}` };
+
+  // 1년 유효 서명 URL
+  const { data: signedData, error: signErr } = await service.storage
+    .from("contracts")
+    .createSignedUrl(storagePath, 31_536_000);
+
+  if (signErr || !signedData?.signedUrl) {
+    return { error: "서명 URL 생성에 실패했습니다." };
+  }
+
+  const { error: updateErr } = await service
+    .from("contracts")
+    .update({ pdf_url: signedData.signedUrl, updated_at: new Date().toISOString() })
+    .eq("id", contractId);
+
+  if (updateErr) return { error: `계약 업데이트 실패: ${updateErr.message}` };
+
+  revalidatePath(`/contracts/${contractId}`);
+  return { success: "PDF가 생성되었습니다." };
 }
 
 export async function submitContractReview(

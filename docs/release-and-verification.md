@@ -84,5 +84,6 @@ CLI 사용 시: [Lighthouse CLI](https://github.com/GoogleChrome/lighthouse#usin
 |------|------|
 | 2026-05-14 | Phase 8 문서 최초 작성(Playwright·Lighthouse·보안·배포) |
 | 2026-05-14 | 시니어 웹: BTS-WEB-05·Lighthouse 역할 경로·RLS 점검 문구 보강 |
+| 2026-06-07 | SPEC-INFRA-001 구현 반영. CI 파이프라인 재구성(TypeScript 타입체크·명시적 빌드·시크릿 스캔 추가). E2E BTS-01~04 경계 테스트 13개로 확장. |
 
 ---

@@ -1,0 +1,7 @@
+{
+  "detected": true,
+  "matched_keywords": ["supabase", "postgresql", "@supabase/supabase-js", "@supabase/ssr"],
+  "source_files": ["package.json", ".moai/project/tech.md"],
+  "scanned_at": "2026-06-07T00:00:00Z",
+  "tech_md_hash": "seniorlink-web-supabase-postgres"
+}
