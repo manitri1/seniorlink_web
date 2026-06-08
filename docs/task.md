@@ -106,14 +106,14 @@
 
 ## Phase 6 — 계약·정산·리뷰
 
-| # | 작업 |
-|---|------|
-| 6.1 | `/contracts`, `/contracts/[contractId]` — `contracts` 조회·상태·진행률 |
-| 6.2 | PDF: **Storage** 업로드/서명 URL 또는 Edge에서 생성 후 저장(정책에 따라) |
-| 6.3 | `/contracts/[contractId]/settlement` — `settlements` CRUD(RLS) |
-| 6.4 | **토스 등 웹훅**: Route Handler 또는 Edge에서 서명 검증 후 **service role**로 DB만 갱신([stack-next-supabase.md](./stack-next-supabase.md) 3절) |
-| 6.5 | 정산 단계 UI: Stepper 또는 단계 라벨([design.md](./design.md)) |
-| 6.6 | 리뷰: `reviews` `insert` — 완료 조건에서만 노출 |
+| # | 작업 | 상태 |
+|---|------|------|
+| 6.1 | `/contracts`, `/contracts/[contractId]` — `contracts` 조회·상태·진행률 | ✅ |
+| 6.2 | PDF: **Storage** 업로드/서명 URL 또는 Edge에서 생성 후 저장(정책에 따라) | ✅ |
+| 6.3 | `/contracts/[contractId]/settlement` — `settlements` CRUD(RLS) | ✅ |
+| 6.4 | **토스 등 웹훅**: Route Handler 또는 Edge에서 서명 검증 후 **service role**로 DB만 갱신([stack-next-supabase.md](./stack-next-supabase.md) 3절) | ✅ |
+| 6.5 | 정산 단계 UI: Stepper 또는 단계 라벨([design.md](./design.md)) | ✅ |
+| 6.6 | 리뷰: `contract_reviews` `insert` — 완료 조건에서만 노출 | ✅ |
 
 **완료 기준**: UC-WEB-C-10~C-12 스테이징 데이터로 검증.
 
@@ -194,3 +194,4 @@
 | 2026-05-14 | 1.2 | Phase 8: Playwright 스모크(`e2e/`), `npm run ci`, GitHub Actions, `docs/release-and-verification.md` |
 | 2026-05-14 | 1.3 | `docs/test_usecase.md` — Phase·UC 기준 단계별 테스트 절차·입출력 예시 |
 | 2026-05-14 | 1.4 | 시니어 웹: `profile_id`·RLS 마이그레이션, `/senior/*` 셸·제안·프로필, 가입/로그인 역할 분기 |
+| 2026-06-07 | 1.5 | Phase 6 계약·PDF·정산·웹훅 구현 반영. 시니어 대시보드 라우팅 버그 수정(profiles null 폴백). 신규 마이그레이션 3건(RPC·Storage·RLS). CI 파이프라인 업데이트. |

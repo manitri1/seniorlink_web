@@ -38,10 +38,10 @@
 | UC-WEB-C-04 | 기업 | 기업 정보 등록 | 로그인됨 | 프로필 폼 | `POST /v1/companies/profile` | `from('companies').upsert` | 프로필 존재 | 검증·RLS 오류 |
 | UC-WEB-C-05 | 기업 | TF 요청 등록 | 정책상 프로필 완료 등 | 요청 폼 | `POST /v1/requests` | `from('tf_requests').insert` | 요청 ID 생성 | 필수 필드 누락 |
 | UC-WEB-C-06 | 기업 | TF 요청 조회·수정 | 소유권 | 목록·상세·편집 | `GET`/`PATCH` requests | `select` / `update` + RLS | 최신 반영 | 403 |
-| UC-WEB-C-07 | 기업 | AI 매칭 결과 검토 | 요청 존재 | 매칭 목록 | `GET /v1/requests/{id}/matches` | `select` 동기화 테이블 또는 `rpc('get_matches')` | 제안 대상 선정 가능 | 후보 0명 |
+| UC-WEB-C-07 | 기업 | AI 매칭 결과 검토 | 요청 존재 | 매칭 목록 | `GET /v1/requests/{id}/matches` | `rpc('populate_request_matches', { request_id })` 후 `select` | 제안 대상 선정 가능 | 후보 0명 |
 | UC-WEB-C-08 | 기업 | 제안 발송 | 후보 선택 | 제안 작성·발송 | `POST /v1/requests/{id}/proposals` | `from('proposals').insert` 또는 `rpc` | 제안 생성 | 정책 위반 |
 | UC-WEB-C-09 | 기업 | 제안 목록·철회 | 제안 존재 | 목록·철회 | `GET .../proposals`, `POST .../withdraw` | `select` / `update` 상태 | 상태 갱신 | 이미 응답됨 |
-| UC-WEB-C-10 | 기업 | 계약 조회 | 계약 존재 | 상세·PDF | `GET`/`POST .../pdf` | `from('contracts')` + Storage/Nest PDF | 문서 확보 | 무효 ID |
+| UC-WEB-C-10 | 기업 | 계약 조회 | 계약 존재 | 상세·PDF | `GET`/`POST .../pdf` | `from('contracts').select()` + `generateContractPdf` Server Action + Storage 업로드 | 문서 확보 | 무효 ID |
 | UC-WEB-C-11 | 기업 | 진행·정산 | 계약 활성 | 정산 UI | settlement REST | `from('settlements')` + 웹훅 Handler | 정산 반영 | 결제 오류 |
 | UC-WEB-C-12 | 기업 | 리뷰 작성 | 완료 조건 | 폼 제출 | `POST /v1/contracts/{id}/review` | `from('reviews').insert` | 리뷰 저장 | 중복 리뷰 |
 | UC-WEB-S-01 | 시니어 | 프로필 유지 | 로그인됨 | `/senior/profile` 편집 | (동일 도메인 REST 가정 시 프로필 API) | `from('senior_profiles').update` + RLS `profile_id` | 저장 반영 | 검증·RLS |
@@ -114,3 +114,4 @@ sequenceDiagram
 | 2026-05-14 | 0.4 | `stack-next-supabase.md` 반영: Nest·Supabase 병기 표, 시퀀스 5.1/5.2 |
 | 2026-05-14 | 0.5 | 헤더에 [test_usecase.md](./test_usecase.md) 링크 추가 |
 | 2026-05-14 | 0.6 | 시니어 웹 1차: `UC-WEB-S-01`~`S-04` 표·BTS-03·§6 |
+| 2026-06-07 | 0.7 | Phase 6 구현 반영: PDF 생성(UC-WEB-C-10 `generateContractPdf` + Storage), 정산(UC-WEB-C-11), 웹훅 핸들러. AI 매칭 RPC(UC-WEB-C-07). |

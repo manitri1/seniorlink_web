@@ -113,13 +113,54 @@ WHERE p.role = 'senior'
 
 ### `contracts` · `settlements` · `contract_reviews` (Phase 6)
 
-| 테이블 | 용도 |
-|--------|------|
-| `contracts` | `proposals` 1:1. 기간·역할·보수·`pdf_url`·`progress`·`contract_status`. |
-| `settlements` | `contracts` 1:1. 금액·`settlement_status`·토스 필드(선택). |
-| `contract_reviews` | 계약 완료 후 기업(`reviewer_id`)이 시니어(`senior_id`)에 남기는 후기. |
+| 테이블 | 컬럼 | 용도 |
+|--------|------|------|
+| `contracts` | `id`, `proposal_id` (FK), `status` (contract_status enum: draft/active/settlement_requested/completed/cancelled), `company_id`, `senior_profile_id`, `request_id`, `start_date`, `end_date`, `total_amount`, `progress_pct`, `pdf_url` | `proposals` 1:1. 기간·역할·보수·PDF URL·진행률·상태 |
+| `settlements` | `id`, `contract_id` (FK), `status` (settlement_status enum: pending/released/completed/failed), `amount`, `paid_at`, `toss_*` (선택) | `contracts` 1:1. 금액·정산 상태·결제 정보 |
+| `contract_reviews` | `id`, `contract_id` (FK), `company_id`, `senior_id`, `rating` (1~5), `comment` | 계약 완료 후 기업(`reviewer_id`)이 시니어에 남기는 후기 |
 
 마이그레이션: `supabase/migrations/20260521110000_core_schema.sql`
+
+#### RLS (contracts · settlements · contract_reviews)
+
+| 테이블 | 정책 | 내용 |
+|--------|------|------|
+| `contracts` | `contracts_select_own` (기업) | `company_id`가 본인 소유 `companies` 행과 일치할 때 select |
+| `contracts` | `contracts_select_senior_involved` (시니어) | `senior_profile_id`가 본인 `senior_profiles`와 연결되었을 때 select |
+| `contracts` | `contracts_insert_own` (기업) | 본인 기업 소유 제안 체인에만 insert |
+| `contracts` | `contracts_update_own` (기업) | 본인 기업 계약만 update |
+| `settlements` | `settlements_select_own` (기업) | 소속 `contract_id`가 본인 기업 계약일 때만 select |
+| `settlements` | `settlements_select_senior_involved` (시니어) | 본인 계약의 정산만 select |
+| `settlements` | `settlements_insert_own` (기업) | 본인 계약만 insert |
+| `settlements` | `settlements_update_own` (기업) | 본인 계약 정산만 update |
+| `contract_reviews` | `contract_reviews_select_own` (기업) | 본인 기업 계약의 후기 조회 |
+| `contract_reviews` | `contract_reviews_select_senior_subject` (시니어) | 피평가 시니어로서 본인 후기만 select |
+| `contract_reviews` | `contract_reviews_insert_own` (기업) | `reviewer_id = auth.uid()` 이고 계약 `completed`일 때만 insert |
+
+## Storage · RPC (Phase 6)
+
+### `contracts` Storage 버킷 (비공개, PDF 전용)
+
+마이그레이션: `supabase/migrations/20260607000002_add_contracts_storage_bucket.sql`
+
+| 정책 | 역할 | 내용 |
+|------|------|------|
+| `contracts_insert_service_role` | service_role | PDF 파일 insert만 허용(app role은 불가) |
+| `contracts_select_authenticated` | authenticated | 소유 계약 또는 제안 관련 시니어만 select |
+
+용도: 기업이 계약 PDF를 생성하면 **service role**로 Storage에 업로드, 경로 `/contracts/{contract_id}/{filename}`에 저장.
+
+### `populate_request_matches` RPC
+
+마이그레이션: `supabase/migrations/20260607000001_add_populate_request_matches_rpc.sql`
+
+```sql
+rpc('populate_request_matches', { request_id: uuid })
+```
+
+- **실행자**: service_role만(client·anon 불가)
+- **역할**: AI 매칭 결과를 `request_matches` 테이블에 삽입(기존 행 제거 후 갱신)
+- **호출처**: 서버 API Route(`/api/webhooks/matching` 등) 또는 cron job에서만
 
 ## 이후 Phase
 

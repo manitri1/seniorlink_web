@@ -16,7 +16,7 @@
 ## Phase 0 — Supabase·환경·스키마
 
 | 항목 | 내용 |
-|------|------|
+| --- | --- |
 | 대응 task | 0.1 ~ 0.6 |
 | 관련 UC | (인프라 선행, UC 직접 매핑 없음) |
 
@@ -56,7 +56,7 @@
 ## Phase 1 — 디자인 토큰·앱 셸
 
 | 항목 | 내용 |
-|------|------|
+| --- | --- |
 | 대응 task | 1.1 ~ 1.4 |
 | 관련 UC | (공통 UI 품질 — `usecase.md` 절 2) |
 
@@ -69,9 +69,7 @@
 | **출력 (화면)** | 배경 off-white 계열, 헤드라인에 Manrope 계열 서체 적용(브라우저 개발자도구로 `--font-manrope` 확인 가능) |
 | **입력 (URL)** | 로그인 후 `/dashboard` 등 대시보드 셸 |
 
-**출력 (화면)**
-
-- 좌측 네비(다크 Navy 톤), 본문 max-width·거터가 [design.md](./design.md)와 크게 어긋나지 않음.
+출력 (화면): 좌측 네비(다크 Navy 톤), 본문 max-width·거터가 [design.md](./design.md)와 크게 어긋나지 않음.
 
 **확인 사항**
 
@@ -80,105 +78,75 @@
 
 ---
 
-## Phase 2 — 인증·미들웨어·역할
+## Phase 2 — 인증·미들웨어·역할 가드
 
 | 항목 | 내용 |
 |------|------|
 | 대응 task | 2.1 ~ 2.5 |
 | 관련 UC | UC-WEB-C-01, C-01b, C-02, C-03 |
+| task 완료 기준 | 기업·시니어 계정 모두 가입·로그인 후 올바른 대시보드 진입 |
 
-### TU-P2-00 이메일 주소 (Supabase 제약)
+### TU-P2-00 E2E 로그인 테스트 계정 준비
 
-**원인**: `company@example.com` 처럼 **`@example.com` / `@example.org` 등 RFC 예약·문서용 도메인**은 Supabase Auth에서 **허용되지 않으며**, `Email address "…" is invalid` 로 거절됩니다. Next 앱의 폼 검증 문제가 아닙니다.
-
-**테스트에 쓸 수 있는 주소 예시** (본인이 수신·인증 가능한 도메인으로 바꿉니다).
-
-| 형태 | 예시 | 비고 |
-|------|------|------|
-| Gmail + 태그 | `내계정+seniorlinkqa@gmail.com` | 같은 수신함으로 메일 수집, Supabase에서 통과하기 쉬움 |
-| 실제 회사 메일 | `tester@우리회사실제도메인.co.kr` | MX가 있고 수신·인증 링크를 열 수 있어야 함 |
-| 일회용이 아닌 실서비스형 | `seniorlink-tester@outlook.com` 등 | 프로젝트 정책에 맞는 공용 QA 메일 |
-
-**피할 것**: `@example.com`, `@example.net`, `@test.com`, 지나치게 짧은 도메인 등(GoTrue 이메일 검증 정책).
-
-### TU-P2-01 회원가입 (기업)
+Supabase Auth는 **실제 수신 가능한 도메인**만 허용합니다. `@example.com` 등은 거절됩니다.
 
 | 구분 | 내용 |
 |------|------|
-| **전제** | 위 **TU-P2-00**에 맞는 주소가 Supabase에 아직 없음 |
-| **입력 (URL)** | `/signup` |
-| **입력 (폼)** | 담당자 이름: `품질팀 김테스트`, 이메일: **`본인수신가능@gmail.com`의 플러스 주소 등**(예: `hongildong+slweb@gmail.com`), 비밀번호: `TestPassw0rd!` (8자 이상) |
-| **출력 (화면)** | 이메일 확인 필요 시 안내 문구; 즉시 세션 있으면 `/dashboard`로 이동 |
-| **출력 (DB)** | `auth.users`에 사용자 생성, `profiles`에 `id` = `auth.users.id`, `role` = `company` (트리거/앱 로직에 따름) |
+| **방법** | Gmail `+` 별칭 사용 예: `본인계정+slweb@gmail.com` |
+| **환경변수** | `E2E_COMPANY_EMAIL=본인계정+slweb@gmail.com` · `E2E_COMPANY_PASSWORD=TestPassw0rd!` |
+| **실행** | `npm run test:e2e:doc-login` |
 
 **확인 사항**
 
-- [ ] 중복 이메일 가입 시 사용자에게 읽을 수 있는 오류 메시지가 표시된다(UC 예외).
-- [ ] UC-WEB-C-01: 가입 후 로그인 가능 상태가 된다.
+- [ ] Supabase 대시보드 → Authentication에서 해당 이메일이 `Confirmed` 상태인지 확인.
+- [ ] `@example.com` 도메인으로 가입 시도 시 에러 메시지 표시.
 
-### TU-P2-01b 회원가입 (시니어)
+### TU-P2-01 기업 계정 가입·로그인
 
 | 구분 | 내용 |
 |------|------|
-| **전제** | TU-P2-00에 맞는 **미사용** 이메일 |
+| **입력 (URL)** | `/signup` (기업, 기본 role) |
+| **입력 (폼)** | 이름: `테스트기업`, 이메일: `corp+test@gmail.com`, 비밀번호: `TestPassw0rd!` |
+| **출력 (URL)** | 이메일 확인 비활성화 시 `/dashboard`; 활성화 시 확인 안내 메시지 |
+| **출력 (DB)** | `profiles(role='company')`, `companies` 행 생성 |
+
+**확인 사항**
+
+- [ ] UC-WEB-C-01: 중복 이메일로 가입 시 에러 토스트.
+- [ ] 로그인 후 `/dashboard` 진입, 기업 사이드바 표시.
+- [ ] `/senior/*` 접근 시 `/dashboard`로 리디렉션.
+
+### TU-P2-02 시니어 계정 가입·로그인
+
+| 구분 | 내용 |
+|------|------|
 | **입력 (URL)** | `/signup?role=senior` |
-| **입력 (폼)** | 이름·이메일·비밀번호(8자 이상) |
-| **출력 (URL)** | 즉시 세션 있으면 `/senior/dashboard` |
-| **출력 (DB)** | `profiles.role` = `senior`, `senior_profiles.profile_id` = `auth.uid()` |
+| **입력 (폼)** | 이름: `테스트시니어`, 이메일: `senior+test@gmail.com`, 비밀번호: `TestPassw0rd!` |
+| **출력 (URL)** | `/senior/dashboard` |
+| **출력 (DB)** | `profiles(role='senior')`, `senior_profiles(profile_id=<uid>)` 행 생성 |
 
 **확인 사항**
 
-- [ ] UC-WEB-C-01b: 기업 가입과 구분되어 시니어 셸로만 진입한다.
+- [ ] UC-WEB-C-01b: 시니어로 가입 후 **기업 대시보드가 아닌** `/senior/dashboard` 진입.
+- [ ] DB `profiles.role = 'senior'` 확인(Supabase 대시보드 → Table Editor).
+- [ ] 마이그레이션 미적용 환경: signup action의 방어적 upsert 동작 확인(`profiles_insert_own` 정책 적용 필요).
+- [ ] `/dashboard`(기업) 직접 접근 시 `/senior/dashboard`로 리디렉션.
 
-### TU-P2-02 로그인·세션
+### TU-P2-03 세션 갱신·역할 가드
 
 | 구분 | 내용 |
 |------|------|
-| **입력 (URL)** | `/login?returnUrl=/requests` |
-| **입력 (폼)** | 위에서 만든 이메일·비밀번호 |
-| **출력 (URL)** | 로그인 성공 시 `returnUrl` 우선(역할과 `/senior` 접두 일치 검증). 없으면 기업은 `/dashboard`, 시니어는 `/senior/dashboard` |
-| **출력 (동작)** | 새로고침 후에도 보호 라우트 접근 유지(쿠키 세션) |
+| **전제** | 기업 계정 로그인 상태 |
+| **입력** | 페이지 새로고침 또는 보호 경로(`/requests`) 재접근 |
+| **출력 (화면)** | 세션 유지, 보호 페이지 정상 표시 |
+| **입력 (미인증)** | 쿠키 삭제 후 `/dashboard` 접근 |
+| **출력 (URL)** | `/login?returnUrl=/dashboard` |
 
 **확인 사항**
 
-- [ ] UC-WEB-C-02: 잘못된 비밀번호 시 `role="alert"` 영역에 오류 표시.
-- [ ] UC-WEB-C-03: `middleware` 경유 요청에서 세션 갱신(로그 없어도 401 연쇄가 나지 않음).
-
-### TU-P2 샘플 계정 실측 시 주의
-
-| 현상 | 원인 예시 | 조치 |
-|------|-----------|------|
-| `Email address "…" is invalid` | `@example.com` 등 **예약/문서용 도메인** | TU-P2-00 참고 — Gmail+태그·실제 도메인 메일 사용 |
-| `Invalid login credentials` | 미가입·비밀번호 불일치·**이메일 미인증** | Supabase Authentication에서 해당 이메일·`email_confirmed_at`·비밀번호 재설정 확인 |
-| 가입 직후에도 로그인 불가 | Confirm email 활성 + 수신 불가 주소 | 로컬 개발: Auth에서 이메일 확인 비활성화, 또는 **수신 가능한** 메일 사용 |
-| `email rate limit exceeded` | 짧은 시간에 가입 시도 반복 | 잠시 대기 후 재시도, Supabase 대시보드에서 한도·스팸 정책 확인 |
-
-**자동 로그인 재현**: 로컬에서 `npm run dev` 실행 후, **수신 가능한 테스트 메일**을 환경 변수로 넘깁니다 (`@example.com` 불가).
-
-```bash
-set E2E_COMPANY_EMAIL=본인계정+slweb@gmail.com
-set E2E_COMPANY_PASSWORD=TestPassw0rd!
-set PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001
-npm run test:e2e:doc-login
-```
-
-(`e2e/manual/login-doc-credentials.spec.ts` — CI 기본 `test:e2e`에는 포함되지 않음)
-
-### TU-P2-03 역할별 가드·리다이렉트
-
-| 구분 | 내용 |
-|------|------|
-| **입력 (비로그인)** | 시크릿 창에서 `/dashboard` 또는 `/senior/dashboard` 직접 입력 |
-| **출력 (URL)** | `/login?returnUrl=…` |
-| **입력 (시니어)** | `profiles.role = senior` 계정으로 로그인 후 `/dashboard` 또는 `/requests` 접근 시도 |
-| **출력 (URL)** | `/senior/dashboard` 등 시니어 허용 경로로 리다이렉트(기업 전용 라우트 차단) |
-| **입력 (기업)** | `profiles.role = company` 계정으로 `/senior/dashboard` 접근 시도 |
-| **출력 (URL)** | `/dashboard` 등 기업 허용 경로로 리다이렉트 |
-
-**확인 사항**
-
-- [ ] 비로그인 시 anon으로 다른 기업 `tf_requests`가 노출되지 않는다(RLS + 미들웨어).
-- [ ] 구형 `/senior-blocked` URL은 `/senior/dashboard` 또는 역할에 맞는 홈으로 이어진다.
+- [ ] UC-WEB-C-03: `middleware.ts`의 `updateSession`으로 토큰 자동 갱신.
+- [ ] 로그인 후 `/login` 재접근 시 `/`로 리디렉션.
+- [ ] 인증 없이 `/senior/dashboard` 접근 시 `/login?returnUrl=/senior/dashboard`.
 
 ---
 
@@ -187,22 +155,24 @@ npm run test:e2e:doc-login
 | 항목 | 내용 |
 |------|------|
 | 대응 task | 3.1 ~ 3.4 |
-| 관련 UC | UC-WEB-C-04 · BTS-01 |
+| 관련 UC | UC-WEB-C-04 |
+| task 완료 기준 | 저장 후 재방문 시 데이터 반영 |
 
-### TU-P3-01 프로필 저장
+### TU-P3-01 기업 프로필 등록·수정
 
 | 구분 | 내용 |
 |------|------|
 | **전제** | 기업 계정 로그인 |
 | **입력 (URL)** | `/company/profile` |
-| **입력 (폼)** | 회사명: `(주)시니어링크 QA`, 소개: `MVP 베타 검증용 더미 소개입니다.`, (스키마에 있는 필드) 빈 값 없이 채움 |
-| **출력 (화면)** | 저장 성공 메시지 또는 동일 화면에 반영된 값 |
-| **출력 (DB)** | `companies`에서 `owner_id = auth.uid()` 행의 `name` 등이 업데이트됨 |
+| **입력 (폼)** | 회사명: `(주)테스트기업`, 업종: `IT/소프트웨어`, 소개: `AI 기반 HR 솔루션`, 웹사이트: `https://example.com` |
+| **출력 (DB)** | `companies(name, industry, description, website_url)` 업서트 |
+| **출력 (화면)** | 성공 토스트, 재방문 시 동일 값 표시 |
 
 **확인 사항**
 
-- [ ] UC-WEB-C-04: 페이지 새로고침 후에도 동일 값이 조회된다.
-- [ ] RLS 위반 시 사용자 친화적 문구(맵핑된 PostgREST 오류)가 나온다.
+- [ ] UC-WEB-C-04: RLS — 다른 기업 계정으로 접근 시 본인 데이터만 조회.
+- [ ] 필수 필드(회사명) 비워 두면 저장 불가.
+- [ ] 저장 후 `companies` 테이블에 `owner_id = auth.uid()` 행 존재.
 
 ---
 
@@ -212,34 +182,39 @@ npm run test:e2e:doc-login
 |------|------|
 | 대응 task | 4.1 ~ 4.4 |
 | 관련 UC | UC-WEB-C-05, C-06 · BTS-01 |
+| task 완료 기준 | 생성·목록·상세 필수, 수정은 스키마·RLS 범위 내 |
 
-### TU-P4-01 요청 생성
+### TU-P4-01 TF 요청 생성
 
 | 구분 | 내용 |
 |------|------|
+| **전제** | 기업 프로필(`companies` 행) 존재 |
 | **입력 (URL)** | `/requests/new` |
-| **입력 (폼)** | 제목: `2026 상반기 재무 TF`, 분야: `재무`, 기간(주): `8`, 목표: `분기 보고서 정비`, 지역: `서울`, 예산 최소/최대(있으면): `10000000`, `30000000` |
-| **출력 (URL)** | `/requests/<uuid>` (생성된 요청 ID) |
-| **출력 (DB)** | `tf_requests`에 `company_id` = 본인 기업, `status` = `open` 등 기본값 |
+| **입력 (폼)** | 제목: `재무 전략 TF 8주`, 분야: `재무·회계`, 지역: `서울`, 기간: `8주`, 예산: `2000~3000만원`, 목표: `분기 손익 분석 보고서` |
+| **출력 (URL)** | `/requests/<new_id>` |
+| **출력 (DB)** | `tf_requests(status='open', company_id=<company_id>)` |
 
 **확인 사항**
 
-- [ ] UC-WEB-C-05: 필수 필드 누락 시 제출 전 검증 또는 서버 오류 메시지.
-- [ ] BTS-01: 기업 관점에서 TF 요청이 목록에 보인다.
+- [ ] UC-WEB-C-05: 필수 필드(제목·분야·목표) 누락 시 저장 불가.
+- [ ] RLS — 생성된 요청은 소유 기업 계정에만 조회.
+- [ ] BTS-01: 생성 후 `/requests` 목록에 새 항목 표시.
 
-### TU-P4-02 목록·필터·상세·수정
+### TU-P4-02 TF 요청 목록·상세·수정
 
 | 구분 | 내용 |
 |------|------|
-| **입력 (URL)** | `/requests?status=open` |
-| **출력 (화면)** | 방금 생성한 요청이 필터에 맞게 표시 |
-| **입력** | 상세 `/requests/<uuid>` → 서브내비에서 개요·매칭·제안 링크 존재 확인 |
-| **입력** | (정책상 수정 가능한 상태일 때) 제목 일부 변경 후 저장 |
-| **출력 (DB)** | `updated_at` 갱신, 제목 반영 |
+| **입력 (URL)** | `/requests` |
+| **출력 (화면)** | 기업 소유 요청 목록, 상태 뱃지(색+텍스트), 행 간격·구분선 |
+| **입력 (URL)** | `/requests/<requestId>` |
+| **출력 (화면)** | 요청 상세, 서브내비(개요 \| 매칭 결과 \| 제안) |
+| **입력** | 수정 폼: 제목 변경 후 저장 |
+| **출력 (DB)** | `tf_requests` 갱신 |
 
 **확인 사항**
 
-- [ ] UC-WEB-C-06: 본인 소유 아닌 `uuid`로 접근 시 404 또는 접근 불가.
+- [ ] UC-WEB-C-06: 다른 기업 요청 ID로 접근 시 빈 결과 또는 404.
+- [ ] 상태 `cancelled` 요청은 수정 불가(또는 경고 표시).
 - [ ] 빈 목록일 때 CTA(새 요청)가 있다.
 
 ---
@@ -314,7 +289,90 @@ npm run test:e2e:doc-login
 | 관련 UC | UC-WEB-C-09, C-10, C-11, C-12 · **UC-WEB-S-03, S-04** · BTS-03, BTS-04 |
 | task 완료 기준 | UC-WEB-C-10~C-12 스테이징 검증 |
 
-### TU-P6-01 제안 수락(데모)·계약 생성
+### TU-P6-01 계약 활성화 및 진행률 업데이트
+
+| 구분 | 내용 |
+|------|------|
+| **전제** | 수락된 제안 존재, 계약이 `draft` 상태 |
+| **입력 (URL)** | `/contracts` → 계약 선택 또는 `/contracts/<contractId>` 직접 접근 |
+| **입력 (동작)** | "계약 시작" 또는 활성화 버튼 클릭 |
+| **출력 (DB)** | `contracts.status` = `active` |
+| **입력** | 진행률 슬라이더 또는 입력: `40` |
+| **출력 (화면)** | 진행률 바 40% 표시 |
+| **출력 (DB)** | `contracts.progress_pct` = 40 |
+
+**확인 사항**
+
+- [ ] UC-WEB-C-10: 계약 상세 페이지에 상태 배지(draft → active) 표시.
+- [ ] 미활성 계약은 진행률 수정 불가.
+
+### TU-P6-02 PDF 생성 및 다운로드
+
+| 구분 | 내용 |
+|------|------|
+| **전제** | 활성 계약 존재, Supabase Storage `contracts` 버킷 생성됨(`20260607000002` 마이그레이션 적용) |
+| **입력 (URL)** | `/contracts/<contractId>` |
+| **입력 (동작)** | "계약서 PDF 생성" 또는 유사 버튼 클릭 |
+| **출력 (HTTP)** | `generateContractPdf` Server Action 호출, service role로 Storage에 파일 업로드 |
+| **출력 (DB)** | `contracts.pdf_url` 값 생성(예: `https://<supabase-url>/storage/v1/object/public/contracts/<contract_id>/contract.pdf`) |
+| **출력 (화면)** | PDF 다운로드 링크 표시 또는 새 탭에서 열기 |
+
+**확인 사항**
+
+- [ ] Service role 없이 authenticated 역할로 Storage upload 시도 시 403.
+- [ ] `pdf_url`이 저장되고 재접근 시 동일 값 유지.
+- [ ] 파일 크기 10 MB 초과 시 Storage 정책(제한) 확인.
+
+### TU-P6-03 정산 요청 및 데모 완료
+
+| 구분 | 내용 |
+|------|------|
+| **전제** | 활성 계약 존재 |
+| **입력 (URL)** | `/contracts/<contractId>/settlement` |
+| **입력 (동작)** | "정산 요청" 버튼 클릭 |
+| **출력 (DB)** | `contracts.status` = `settlement_requested` (또는 구현상 동등), `settlements.status` = `pending` |
+| **입력 (동작)** | "데모 완료" 또는 정산 완료 버튼 클릭 |
+| **출력 (DB)** | `settlements.status` = `released` → `completed` 흐름(구현 기준), `contracts.status` = `completed` |
+| **출력 (화면)** | Stepper 단계 라벨 변경(예: "정산 요청" → "완료") |
+
+**확인 사항**
+
+- [ ] UC-WEB-C-11: 실제 결제 없이 데모 모드로 진행 가능.
+- [ ] BTS-04: 정산 UI까지 도달.
+- [ ] 정산 상태 변화가 DB에서 확인됨.
+
+### TU-P6-04 결제 웹훅 수신 (수동)
+
+| 구분 | 내용 |
+|------|------|
+| **전제** | `SUPABASE_SERVICE_ROLE_KEY` 서버 환경변수 설정됨, `/api/webhooks/payment` Route Handler 구현됨 |
+| **입력 (curl)** | `POST /api/webhooks/payment` + Basic Auth header + Toss 웹훅 payload (결제 확인 상태) |
+| **예시** | `curl -X POST http://localhost:3000/api/webhooks/payment -H "Authorization: Basic <base64>" -H "Content-Type: application/json" -d '{"status": "SUCCESS", ...}'` |
+| **출력 (HTTP)** | 성공 시 200, 실패/서명 오류 시 401/400 |
+| **출력 (DB)** | service role로 `settlements.status` 업데이트(예: `pending` → `released` → `completed`) |
+
+**확인 사항**
+
+- [ ] Basic Auth 헤더 누락 시 401.
+- [ ] 웹훅 서명 검증 실패 시 401 반환.
+- [ ] 응답에 service role 키·내부 스택이 노출되지 않음.
+- [ ] 실제 Toss 웹훅은 staging/production 배포 후 통합 테스트 시 수행.
+
+### TU-P6-05 리뷰 작성
+
+| 구분 | 내용 |
+|------|------|
+| **전제** | 계약 `completed` |
+| **입력 (URL)** | `/contracts/<contractId>` |
+| **입력 (폼)** | 별점: 5, 코멘트: `일정과 커뮤니케이션이 훌륭했습니다.` |
+| **출력 (DB)** | `contract_reviews`에 `reviewer_id` = 기업 사용자, `contract_id` 유니크 제약 확인 |
+
+**확인 사항**
+
+- [ ] UC-WEB-C-12: 완료 전에는 리뷰 폼 미노출.
+- [ ] 중복 제출 시 DB 유니크 제약 또는 서버 검증으로 방지.
+
+### TU-P6-06 제안 수락(데모)·계약 생성
 
 | 구분 | 내용 |
 |------|------|
@@ -330,56 +388,6 @@ npm run test:e2e:doc-login
 - [ ] UC-WEB-C-10: 무효 `proposalId`는 404 또는 오류.
 - [ ] BTS-03: 기업 화면에서 계약 생성까지 도달 가능.
 
-### TU-P6-02 계약 활성·진행률
-
-| 구분 | 내용 |
-|------|------|
-| **입력** | 계약 상세에서 **계약 시작**(또는 `activateContract`) 실행 |
-| **출력 (DB)** | `contracts.status` = `active`, `settlements` 1행 생성(구현 기준) |
-| **입력** | 진행률 `40` 제출 |
-| **출력 (화면)** | 진행률 바 또는 숫자 40% 표시 |
-
-**확인 사항**
-
-- [ ] PDF 자리(문구/URL 필드)가 요구사항대로 노출되는지(Storage 미연동 시 placeholder 허용).
-
-### TU-P6-03 정산 플로우(데모)
-
-| 구분 | 내용 |
-|------|------|
-| **입력 (URL)** | `/contracts/<contractId>/settlement` |
-| **입력** | 정산 요청(데모) → 완료(데모) 순으로 액션 |
-| **출력 (DB)** | `contracts.status`가 `settlement_requested` → 이후 `completed` 등 구현 상태와 일치 |
-| **출력 (화면)** | Stepper 단계 라벨 갱신 |
-
-**확인 사항**
-
-- [ ] UC-WEB-C-11: 실결제 없이도 스테이징에서 시연이 가능하다.
-- [ ] BTS-04: 정산 UI까지 도달.
-
-### TU-P6-04 리뷰
-
-| 구분 | 내용 |
-|------|------|
-| **전제** | 계약 `completed` |
-| **입력** | 후기 폼: 별점 `5`, 코멘트: `일정과 커뮤니케이션이 훌륭했습니다.` |
-| **출력 (DB)** | `contract_reviews`에 `reviewer_id` = 기업 사용자, `contract_id` 유니크 |
-
-**확인 사항**
-
-- [ ] UC-WEB-C-12: 완료 전에는 폼 미노출 또는 제출 불가.
-- [ ] 중복 제출 시 DB 유니크 또는 서버 검증.
-
-### TU-P6-05 웹훅 스텁
-
-| 구분 | 내용 |
-|------|------|
-| **입력 (HTTP)** | `curl -X POST https://<staging>/api/webhooks/payment -H "Content-Type: application/json" -d "{}"` |
-| **출력 (HTTP)** | 상태 코드 `501`, 본문 JSON에 미구성 안내 메시지 |
-
-**확인 사항**
-
-- [ ] 응답에 서비스 롤 키·내부 스택이 노출되지 않는다.
 
 ---
 
@@ -502,5 +510,12 @@ npm run test:e2e:doc-login
 ## 부록 B — 변경 이력
 
 | 날짜 | 버전 | 내용 |
-|------|------|------|
-| 2026-05-14 | 0.2 | TU-P2-00 추가(Supabase `@example.com` 거절), 수동 E2E는 `E2E_COMPANY_EMAIL` 사용 |
+| --- | --- | --- |
+| 2026-05-14 | 0.1 | 최초 작성(Phase 0~8 골격) |
+| 2026-05-14 | 0.2 | TU-P2-00 추가(Supabase `@example.com` 거절, 수동 E2E는 `E2E_COMPANY_EMAIL` 환경변수 사용) |
+| 2026-05-14 | 0.3 | Phase 3 TU-P3-01 기업 프로필 등록·수정 절차 보강 |
+| 2026-05-14 | 0.4 | Phase 4 TU-P4-01/02 TF 요청 생성·목록·수정 절차 |
+| 2026-05-14 | 0.5 | Phase 5 TU-P5-01~04 매칭·제안·시니어 응답 |
+| 2026-05-14 | 0.6 | Phase 6 TU-P6-01~04 계약·정산·웹훅·리뷰 초안 |
+| 2026-05-14 | 0.7 | Phase 6 TU-P6-05/06 리뷰·계약생성 추가, 시니어 제안 수락 분리 |
+| 2026-06-07 | 0.8 | Phase 6 재구성: TU-P6-01~06 Storage 버킷·웹훅 curl 예시 보강. 시니어 가입 버그 수정 반영(TU-P2-02). 파일 복구(Phase 0~4 소실 복원). |

@@ -26,7 +26,12 @@ export default async function SeniorShellLayout({
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role !== "senior") {
+  // profiles 행이 없으면 auth 메타데이터로 폴백
+  const effectiveRole =
+    profile?.role ??
+    (user.user_metadata?.role === "senior" ? "senior" : "company");
+
+  if (effectiveRole !== "senior") {
     redirect("/dashboard");
   }
 

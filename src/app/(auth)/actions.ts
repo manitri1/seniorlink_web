@@ -38,8 +38,13 @@ export async function login(
     .eq("id", uid)
     .maybeSingle();
 
+  // profiles 행이 없으면(마이그레이션 미적용 등) auth 메타데이터로 폴백
+  const effectiveRole =
+    profile?.role ??
+    (authData.user?.user_metadata?.role === "senior" ? "senior" : "company");
+
   let dest = returnUrl;
-  if (profile?.role === "senior") {
+  if (effectiveRole === "senior") {
     if (!dest.startsWith("/senior")) {
       dest = "/senior/dashboard";
     }
@@ -82,6 +87,15 @@ export async function signup(
   });
 
   if (error) return { error: error.message };
+
+  // 트리거(handle_new_user)가 Supabase 프로젝트에 미적용된 환경 대비.
+  // 이미 트리거가 행을 만들었다면 ignoreDuplicates: true 로 덮어쓰지 않습니다.
+  if (data.user) {
+    await supabase.from("profiles").upsert(
+      { id: data.user.id, role, full_name: name || null },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+  }
 
   if (data.user && !data.session) {
     return {
